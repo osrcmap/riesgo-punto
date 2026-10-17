@@ -12,14 +12,13 @@ const MONTERO = ["--lat", "-4.6540", "--lon", "-79.8539"];
 type Modo = string | undefined;
 async function correr(
   args: string[],
-  o: { peligros?: Modo; avisos?: Modo; reales?: boolean; timeout?: number } = {},
+  o: { peligros?: Modo; avisos?: Modo; peligrosReal?: boolean; timeout?: number } = {},
 ) {
   const log = join(mkdtempSync(join(tmpdir(), "riesgo-punto-")), "args.log");
   const env: Record<string, string> = { ...(process.env as Record<string, string>), FALSO_LOG: log };
-  if (!o.reales) {
-    env.RIESGO_PUNTO_PELIGROS_CLI = join(FALSOS, "peligros.mjs");
-    env.RIESGO_PUNTO_AVISOS_CLI = join(FALSOS, "avisos.mjs");
-  }
+  // avisos-pe siempre falso: el real necesita al SENAMHI, que no responde desde CI.
+  env.RIESGO_PUNTO_AVISOS_CLI = join(FALSOS, "avisos.mjs");
+  if (!o.peligrosReal) env.RIESGO_PUNTO_PELIGROS_CLI = join(FALSOS, "peligros.mjs");
   if (o.peligros) env.FALSO_PELIGROS = o.peligros;
   if (o.avisos) env.FALSO_AVISOS = o.avisos;
   if (o.timeout) env.RIESGO_PUNTO_TIMEOUT_MS = String(o.timeout);
@@ -129,10 +128,11 @@ describe("consultar", () => {
 
 test("contrato con peligros-pe real (instalado como dependencia)", async () => {
   // avisos-pe real necesita al SENAMHI (no responde desde CI): se simula.
-  const { json } = await correr(["consultar", ...MONTERO], {
+  const { json, llamadas } = await correr(["consultar", ...MONTERO], {
     avisos: `archivo:${join(FX, "avisos-montero.json")}`,
-    reales: true,
+    peligrosReal: true,
   });
+  expect(llamadas.map((l) => l.nombre)).toEqual(["AVISOS"]); // peligros-pe real no escribe en el log; avisos es el falso
   expect(json.fuentes.peligros).toEqual({ ok: true });
   expect(json.peligros.zonas_criticas[0]).toMatchObject({ paraje: "Pueblo Nuevo-Las Viudas, Montero" });
 }, 30_000); // peligros-pe carga 30 MB de datos: en CI tarda más de 5 s
