@@ -54,6 +54,7 @@ describe("consultar", () => {
     expect(json.completo).toBe(true);
     expect(json.resumen).toMatchObject({ cruces: 1, zonas_criticas_cercanas: 1, nivel_maximo_en_curso: 4 });
     expect(json.cruces[0].tipo).toBe("lluvia_y_zona_critica");
+    expect(json.resumen.avisos_de_lluvia).toEqual([{ numero: 421, anio: 2026 }]);
     expect(json.mensaje).toContain("ATENCIÓN");
     expect(json.peligros.datos.fuente).toContain("INGEMMET");
   });
@@ -88,6 +89,7 @@ describe("consultar", () => {
     expect(json.completo).toBe(false);
     expect(json.avisos).toBeNull();
     expect(json.resumen.avisos).toBeNull();
+    expect(json.resumen.avisos_de_lluvia).toBeNull();
     expect(json.fuentes.avisos).toMatchObject({ ok: false, error: { code: "FUENTE_NO_DISPONIBLE" } });
     expect(json.mensaje).toContain("no se puede afirmar que no haya avisos");
     expect(json.cruces).toEqual([]);

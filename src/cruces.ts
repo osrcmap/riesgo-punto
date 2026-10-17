@@ -71,11 +71,51 @@ export function cruces(p: SalidaPeligros | null, a: SalidaAvisos | null): Cruce[
 }
 
 export const AVISO_GENERAL =
-  "Información de referencia de fuentes oficiales (SENAMHI, INGEMMET). No es una orden de evacuación. Ante una emergencia sigue a INDECI, SENAMHI y tu municipalidad.";
+  "Fuentes: SENAMHI e INGEMMET. No es una orden de evacuación: ante una emergencia sigue las indicaciones de INDECI y de tu municipalidad.";
+
+/** Qué hacer según el nivel, resumido de las recomendaciones oficiales del SENAMHI. */
+const QUE_HACER: Record<number, string> = {
+  2: "Nivel amarillo: mantente informado.",
+  3: "Nivel naranja: prepárate y sigue las indicaciones de las autoridades.",
+  4: "Nivel rojo: sé extremadamente precavido y sigue las indicaciones de las autoridades.",
+};
+
+/** Nombre corto de los avisos que no son de lluvia: van juntos en una sola línea. */
+function corto(titulo: string): string {
+  if (/HELADA/i.test(titulo)) return "heladas";
+  if (/FRIAJE/i.test(titulo)) return "friaje";
+  if (/VIENTO/i.test(titulo)) return "viento";
+  if (/INCREMENTO DE TEMPERATURA/i.test(titulo)) return "calor";
+  if (/DESCENSO DE TEMPERATURA/i.test(titulo)) return "frío";
+  return titulo.toLowerCase();
+}
+
+const oracion = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+const mayuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const distancia = (m: number) => (m < 1000 ? `${m} m` : `${Number((m / 1000).toFixed(1))} km`);
+const fechaLima = (iso: string) => new Date(Date.parse(iso) - 5 * 3600_000).toISOString().slice(0, 10);
+const SEMANA = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+
+/** "hoy", "mañana" o "lun 20". `hoy` es la fecha de la consulta en Lima (AAAA-MM-DD). */
+function cuando(fecha: string, hoy: string | null): string {
+  if (fecha === hoy) return "hoy";
+  if (hoy && Date.parse(fecha) - Date.parse(hoy) === 86_400_000) return "mañana";
+  return `${SEMANA[new Date(`${fecha}T12:00:00Z`).getUTCDay()]} ${Number(fecha.slice(8, 10))}`;
+}
+
+/** "Flujo de detritos" → "huaico (flujo de detritos)": así lo llama la gente. */
+function peligroTexto(p: string | null | undefined): string {
+  const t = minusculas(p);
+  return /flujo/i.test(t) && !/huaico|huayco/i.test(t) ? `huaico (${t})` : t;
+}
+
+type Meteorologico = SalidaAvisos["meteorologicos"][number];
+const diasVigentes = (m: Meteorologico) => m.dias.filter((d) => d.estado !== "terminado");
 
 /**
- * Texto corto para WhatsApp/SMS: solo hechos y fuentes. Nunca dice "estás a salvo":
- * si una fuente falló, lo dice explícitamente.
+ * Texto corto para Telegram/WhatsApp/SMS, en orden de importancia: coincidencias, lluvias y
+ * huaicos, zonas de peligro cercanas y, en una línea, los demás avisos. Solo hechos con su fuente.
+ * Nunca dice "estás a salvo": si una fuente falló, lo dice explícitamente.
  */
 export function mensaje(o: {
   lat: number;
@@ -87,53 +127,93 @@ export function mensaje(o: {
   errores: Partial<Record<"peligros" | "avisos", ErrorFuente>>;
   cruces: Cruce[];
 }): string {
-  const l: string[] = [
-    `Ubicación (${o.lat}, ${o.lon})${o.momento ? ` - ${horaLima(o.momento)} (hora de Perú)` : ""}`,
-  ];
+  const hoy = o.momento ? fechaLima(o.momento) : null;
+  const bloques: string[][] = [[`📍 ${o.lat}, ${o.lon}${o.momento ? ` · ${horaLima(o.momento)}` : ""}`]];
 
-  for (const c of o.cruces) l.push(`ATENCIÓN: ${c.descripcion}`);
+  for (const c of o.cruces) {
+    const z = c.zonas[0];
+    const que =
+      c.tipo === "activacion_quebradas_y_zona_critica"
+        ? "el SENAMHI avisa posible activación de quebradas aquí"
+        : "hay aviso de lluvias del SENAMHI para esta zona";
+    bloques.push([
+      `⚠️ ATENCIÓN: ${que} y a ${distancia(z.distancia_m)} hay una zona crítica por ${peligroTexto(z.peligro)}.`,
+    ]);
+  }
 
+  const lluvias = ["🌧️ Lluvias y huaicos"];
   if (o.avisos) {
     const q = o.avisos.quebradas;
     if (q) {
-      const distritos = [...new Set(q.zonas.map((z) => z.distrito).filter(Boolean))].join(", ");
-      l.push(
-        `Aviso de posible activación de quebradas N° ${q.numero}-${q.anio}: nivel ${q.color} hasta ${horaLima(q.fin)} (${distritos}).`,
+      lluvias.push(
+        `Aviso N° ${q.numero} de posible activación de quebradas (huaicos): nivel ${q.color} hasta ${cuando(fechaLima(q.fin), hoy)} a las ${horaLima(q.fin).slice(6)}.`,
+      );
+      const rec = q.zonas.find((z) => z.recomendacion)?.recomendacion;
+      if (rec) lluvias.push(`Recomendación del SENAMHI: ${rec}`);
+    }
+    const deLluvia = o.avisos.meteorologicos.filter((m) => ES_LLUVIA.test(m.titulo));
+    for (const m of deLluvia.slice(0, 3)) {
+      lluvias.push(`Aviso N° ${m.numero}: ${oracion(m.titulo)}.`);
+      const dias = diasVigentes(m);
+      if (dias.length) {
+        lluvias.push(`${mayuscula(dias.map((d) => `${cuando(d.fecha, hoy)} ${d.color}`).join(" · "))}.`);
+        const que = QUE_HACER[Math.max(...dias.map((d) => d.nivel))];
+        if (que) lluvias.push(que);
+      }
+    }
+    if (deLluvia.length > 3) lluvias.push(`Y ${deLluvia.length - 3} avisos de lluvia más.`);
+    if (!q && !deLluvia.length) {
+      lluvias.push(
+        "Por ahora el SENAMHI no tiene avisos de lluvia ni de activación de quebradas para este lugar.",
       );
     }
-    for (const m of o.avisos.meteorologicos.slice(0, 4)) {
-      l.push(
-        `Aviso SENAMHI N° ${m.numero}: ${m.titulo.toLowerCase()} - ${m.dias.map((d) => `${d.color} ${ddmm(d.fecha)}`).join(", ")}.`,
-      );
-    }
-    if (o.avisos.meteorologicos.length > 4) l.push(`Y ${o.avisos.meteorologicos.length - 4} avisos más.`);
-    if (!q && !o.avisos.meteorologicos.length)
-      l.push("Ningún aviso vigente o próximo del SENAMHI cubre este punto.");
     if (o.avisos.no_evaluables.length) {
-      l.push(`No se pudieron evaluar ${o.avisos.no_evaluables.length} avisos del SENAMHI para este punto.`);
+      lluvias.push(
+        `No pude revisar ${o.avisos.no_evaluables.length} avisos del SENAMHI para este lugar: revisa senamhi.gob.pe.`,
+      );
     }
   } else {
-    l.push("No se pudo consultar los avisos del SENAMHI: no se puede afirmar que no haya avisos.");
+    lluvias.push(
+      "⚠️ No pude consultar al SENAMHI: no se puede afirmar que no haya avisos. Revisa senamhi.gob.pe.",
+    );
   }
+  bloques.push(lluvias);
 
+  const zonas = ["⛰️ Zonas de peligro cerca (INGEMMET)"];
   if (o.peligros) {
     const zc = o.peligros.zonas_criticas;
     if (zc.length) {
       const z = zc[0];
-      l.push(
-        `Zonas críticas INGEMMET a menos de ${o.radio} m: ${zc.length}. La más cercana, a ${z.distancia_m} m: ${z.peligro ?? "peligro geológico"}${z.paraje ? ` (${z.paraje})` : ""}.`,
+      zonas.push(
+        `La más cercana, a ${distancia(z.distancia_m)}: ${peligroTexto(z.peligro)}${z.paraje ? ` en ${z.paraje}` : ""}.`,
       );
+      const total = o.peligros.resumen.zonas_criticas ?? zc.length;
+      if (total > 1) zonas.push(`En total hay ${total} zonas críticas a menos de ${distancia(o.radio)}.`);
     } else {
-      l.push(
-        `Sin zonas críticas INGEMMET inventariadas a menos de ${o.radio} m (no significa que el lugar sea seguro).`,
+      zonas.push(
+        `No hay zonas críticas registradas a menos de ${distancia(o.radio)}, pero eso no significa que el lugar sea seguro.`,
       );
     }
     const sc = o.peligros.sin_coordenadas_en_distritos_cercanos.length;
-    if (sc) l.push(`Además hay ${sc} zonas críticas sin ubicación exacta en este distrito.`);
+    if (sc) zonas.push(`Además hay ${sc} zonas críticas sin ubicación exacta en este distrito.`);
   } else {
-    l.push("No se pudo consultar el inventario de zonas críticas del INGEMMET.");
+    zonas.push("⚠️ No pude consultar las zonas críticas del INGEMMET.");
   }
+  bloques.push(zonas);
 
-  l.push(AVISO_GENERAL);
-  return l.join("\n");
+  // Los demás avisos (calor, viento, frío…) en una línea: por tipo, el día de nivel más alto.
+  const otros = new Map<string, { nivel: number; texto: string }>();
+  for (const m of o.avisos?.meteorologicos ?? []) {
+    if (ES_LLUVIA.test(m.titulo)) continue;
+    for (const d of diasVigentes(m)) {
+      const k = corto(m.titulo);
+      if ((otros.get(k)?.nivel ?? 0) < d.nivel)
+        otros.set(k, { nivel: d.nivel, texto: `${k} (${d.color} ${cuando(d.fecha, hoy)})` });
+    }
+  }
+  if (otros.size)
+    bloques.push([`🌡️ Otros avisos del SENAMHI: ${[...otros.values()].map((x) => x.texto).join(", ")}.`]);
+
+  bloques.push([AVISO_GENERAL]);
+  return bloques.map((b) => b.join("\n")).join("\n\n");
 }

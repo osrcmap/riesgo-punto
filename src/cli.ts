@@ -5,7 +5,7 @@ import pkg from "../package.json" with { type: "json" };
 import { renderDoctor, runDoctor } from "./agent/doctor.js";
 import { detectMode, type EmitOptions, emit } from "./agent/json-mode.js";
 import { emitNextSteps, type NextStep } from "./agent/next-steps.js";
-import { AVISO_GENERAL, cruces, mensaje } from "./cruces.js";
+import { AVISO_GENERAL, cruces, ES_LLUVIA, mensaje } from "./cruces.js";
 import { ERRORES, exitCode, fallo } from "./errores.js";
 import { AppError } from "./foundation/error-map.js";
 import { type ErrorFuente, ejecutar, type Fuente, SalidaAvisos, SalidaPeligros } from "./fuentes.js";
@@ -115,6 +115,12 @@ async function cmdConsultar(e: z.infer<typeof ENTRADAS.consultar>): Promise<Resu
       nivel_maximo_en_curso: avisos?.resumen.nivel_maximo_en_curso ?? null,
       nivel_maximo_proximo: avisos?.resumen.nivel_maximo_proximo ?? null,
       activacion_quebradas: avisos ? Boolean(avisos.quebradas) : null,
+      // Los avisos de lluvia son los que activan huaicos: el bot avisa de estos (y de cualquier nivel rojo).
+      avisos_de_lluvia: avisos
+        ? avisos.meteorologicos
+            .filter((m) => ES_LLUVIA.test(m.titulo))
+            .map((m) => ({ numero: m.numero, anio: m.anio }))
+        : null,
     },
     cruces: cs,
     mensaje: mensaje({

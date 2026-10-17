@@ -1,6 +1,6 @@
 {
   "name": "@osrcmap/riesgo-punto",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Para un punto del Perú: zonas críticas cercanas (INGEMMET) y avisos vigentes (SENAMHI) en una sola respuesta, con los cruces que importan y un mensaje listo para enviar. CLI agent-first.",
   "type": "module",
   "license": "MIT",

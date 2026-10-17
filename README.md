@@ -22,12 +22,21 @@ riesgo-punto doctor
 ```
 
 ```text
-Ubicación (-4.654, -79.8539) - 17/10 10:00 (hora de Perú)
-ATENCIÓN: El punto está dentro del aviso N° 421-2026 del SENAMHI (precipitaciones en la sierra norte y costa norte: amarillo el 17/10, naranja el 18/10, amarillo el 19/10) y a 288 m de una zona crítica por flujo de detritos, deslizamiento (INGEMMET).
-Aviso SENAMHI N° 421: precipitaciones en la sierra norte y costa norte - amarillo 17/10, naranja 18/10, amarillo 19/10.
-Aviso SENAMHI N° 419: incremento de temperatura diurna en la costa y sierra - rojo 17/10, naranja 18/10, naranja 19/10.
-Zonas críticas INGEMMET a menos de 2000 m: 1. La más cercana, a 288 m: Flujo de detritos, deslizamiento (Pueblo Nuevo-Las Viudas, Montero).
-Información de referencia de fuentes oficiales (SENAMHI, INGEMMET). No es una orden de evacuación. ...
+📍 -4.654, -79.8539 · 17/10 10:00
+
+⚠️ ATENCIÓN: hay aviso de lluvias del SENAMHI para esta zona y a 288 m hay una zona crítica por huaico (flujo de detritos, deslizamiento).
+
+🌧️ Lluvias y huaicos
+Aviso N° 421: Precipitaciones en la sierra norte y costa norte.
+Hoy amarillo · mañana naranja · lun 19 amarillo.
+Nivel naranja: prepárate y sigue las indicaciones de las autoridades.
+
+⛰️ Zonas de peligro cerca (INGEMMET)
+La más cercana, a 288 m: huaico (flujo de detritos, deslizamiento) en Pueblo Nuevo-Las Viudas, Montero.
+
+🌡️ Otros avisos del SENAMHI: calor (rojo hoy).
+
+Fuentes: SENAMHI e INGEMMET. No es una orden de evacuación: ante una emergencia sigue las indicaciones de INDECI y de tu municipalidad.
 ```
 
 > **Ejecútalo desde el Perú.** El SENAMHI no responde a servidores en el extranjero o en la nube. Fuera del Perú, `consultar` devuelve las zonas del INGEMMET y marca los avisos como no disponibles.
@@ -37,9 +46,9 @@ Información de referencia de fuentes oficiales (SENAMHI, INGEMMET). No es una o
 | Campo | Contenido |
 |---|---|
 | `completo` | `true` si ambas fuentes respondieron |
-| `resumen` | cruces, zonas críticas y peligros cercanos, avisos, nivel máximo en curso y próximo, si hay aviso de quebradas. `null` si la fuente no respondió |
+| `resumen` | cruces, zonas críticas y peligros cercanos, avisos, nivel máximo en curso y próximo, si hay aviso de quebradas y cuáles avisos son de lluvia (`avisos_de_lluvia`). `null` si la fuente no respondió |
 | `cruces[]` | `{ tipo, descripcion, aviso, zonas[] }` (ver abajo) |
-| `mensaje` | Texto corto con hechos, fuentes y aviso general |
+| `mensaje` | Texto corto en orden de importancia: coincidencias, lluvias y huaicos, zonas de peligro cercanas, los demás avisos en una línea, fuentes y aviso general |
 | `peligros` | Salida completa de `peligros-pe cerca`, o `null` |
 | `avisos` | Salida completa de `avisos-pe punto`, o `null` |
 | `fuentes` | `{ peligros, avisos }`: `{ ok }` o `{ ok: false, error: { code, message, hint } }` |

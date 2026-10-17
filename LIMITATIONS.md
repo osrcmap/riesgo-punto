@@ -23,5 +23,7 @@ riesgo-punto hereda las limitaciones de sus fuentes: lee también las de [peligr
 
 ## Mensaje
 
-- Resume hasta 4 avisos y la zona crítica más cercana; el detalle completo está en `peligros` y `avisos`.
+- Prioriza lluvias y huaicos: detalla hasta 3 avisos de lluvia y el de activación de quebradas. Los demás avisos (calor, viento, frío…) van en una sola línea con su nivel más alto. Si un aviso de lluvia tiene un título que no reconoce `ES_LLUVIA`, quedaría en esa línea.
+- Muestra la zona crítica más cercana y el total; el detalle completo está en `peligros` y `avisos`.
+- La línea "qué hacer" por nivel resume las recomendaciones oficiales del SENAMHI; no es una instrucción propia.
 - Las horas se muestran en hora de Perú (UTC-5).
