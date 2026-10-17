@@ -135,7 +135,7 @@ test("contrato con peligros-pe real (instalado como dependencia)", async () => {
   });
   expect(json.fuentes.peligros).toEqual({ ok: true });
   expect(json.peligros.zonas_criticas[0]).toMatchObject({ paraje: "Pueblo Nuevo-Las Viudas, Montero" });
-});
+}, 30_000); // peligros-pe carga 30 MB de datos: en CI tarda más de 5 s
 
 test("doctor resume a ambas piezas", async () => {
   const { code, json } = await correr(["doctor", "--sin-red"], ok("montero"));
