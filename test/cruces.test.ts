@@ -84,6 +84,10 @@ describe("mensaje", () => {
     };
     const m = mensaje({ ...base, peligros: p, avisos: conViento, cruces: [] });
     expect(m).toContain("🌡️ Otros avisos del SENAMHI: calor (rojo hoy), viento (naranja mar 20).");
+    const soloAmarillo = { ...conViento, meteorologicos: [conViento.meteorologicos[2], a.meteorologicos[1]] };
+    expect(mensaje({ ...base, peligros: p, avisos: soloAmarillo, cruces: [] })).toContain(
+      "Otros avisos del SENAMHI: calor (rojo hoy), viento (amarillo hoy).",
+    );
     expect(m).not.toContain("INCREMENTO");
   });
 

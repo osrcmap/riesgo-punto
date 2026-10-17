@@ -201,7 +201,7 @@ export function mensaje(o: {
   }
   bloques.push(zonas);
 
-  // Los demás avisos (calor, viento, frío…) en una línea: por tipo, el día de nivel más alto.
+  // Los demás avisos (calor, viento, frío…) en una línea: por tipo, el día de nivel más alto; el más grave primero.
   const otros = new Map<string, { nivel: number; texto: string }>();
   for (const m of o.avisos?.meteorologicos ?? []) {
     if (ES_LLUVIA.test(m.titulo)) continue;
@@ -212,7 +212,12 @@ export function mensaje(o: {
     }
   }
   if (otros.size)
-    bloques.push([`🌡️ Otros avisos del SENAMHI: ${[...otros.values()].map((x) => x.texto).join(", ")}.`]);
+    bloques.push([
+      `🌡️ Otros avisos del SENAMHI: ${[...otros.values()]
+        .sort((x, y) => y.nivel - x.nivel)
+        .map((x) => x.texto)
+        .join(", ")}.`,
+    ]);
 
   bloques.push([AVISO_GENERAL]);
   return bloques.map((b) => b.join("\n")).join("\n\n");
