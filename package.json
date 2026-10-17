@@ -1,0 +1,57 @@
+{
+  "name": "@osrcmap/riesgo-punto",
+  "version": "0.1.0",
+  "description": "Para un punto del Perú: zonas críticas cercanas (INGEMMET) y avisos vigentes (SENAMHI) en una sola respuesta, con los cruces que importan y un mensaje listo para enviar. CLI agent-first.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Oscar Macchiavello (https://github.com/osrcmap)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/osrcmap/riesgo-punto.git"
+  },
+  "homepage": "https://github.com/osrcmap/riesgo-punto#readme",
+  "bugs": "https://github.com/osrcmap/riesgo-punto/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "peru",
+    "riesgo",
+    "huaico",
+    "senamhi",
+    "ingemmet",
+    "alertas",
+    "cli",
+    "el-nino"
+  ],
+  "bin": {
+    "riesgo-punto": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "SKILL.md",
+    "LIMITATIONS.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "bun src/bin.ts",
+    "build": "bun build src/bin.ts --target=node --outfile dist/cli.js --external @osrcmap/peligros-pe --external @osrcmap/avisos-pe",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "prepublishOnly": "bun run typecheck && bun test && bun run build && node scripts/humo.mjs"
+  },
+  "dependencies": {
+    "@osrcmap/avisos-pe": "^0.1.1",
+    "@osrcmap/peligros-pe": "^0.1.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@types/bun": "^1.4.3",
+    "picocolors": "^1.1.1",
+    "typescript": "^5.9.0",
+    "zod": "^4.6.7"
+  }
+}
